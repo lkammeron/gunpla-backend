@@ -52,8 +52,8 @@ router.options('/:id', (req,res) => {
 
 router.get('/:id', async(req, res) => {
     const gundam = await Gundam.findById(req.params.id);
-    if(!gundam){
-        res.status(404).send();
+    if (!gundam) {
+        return res.status(404).json({ error: "Gundam not found" });
     }
     else{
         res.json({
@@ -80,7 +80,39 @@ router.get('/:id', async(req, res) => {
     }
 });
 
-//Single Post through Postman
+//Search Gunpla
+router.get('/gunpla', async (req, res) => {
+    // 1. query parameters uitlezen
+    const { q, limit } = req.query;
+
+    // 2. leeg filter object
+    let filter = {};
+
+    // 3. ALS zoekterm bestaat
+    if (q) {
+        filter = {
+            $or: [
+                { name: { $regex: q } },
+                { origin: { $regex: q } },
+                { grade: { $regex: q } },
+                { unitType: { $regex: q } }
+            ]
+        };
+    }
+
+    // 4. database query met filter
+    let query = Gunpla.find(filter);
+
+    // 5. ALS limit bestaat
+    if (limit) {
+        query = query.limit(Number(limit));
+    }
+
+    // 6. uitvoeren + response
+    const results = await query;
+    res.json(results);
+});
+
 router.post('/', async(req, res) => {
     const {name, grade, scale} = req.body;
 
@@ -88,8 +120,6 @@ router.post('/', async(req, res) => {
         return res.status(400).json({ error: 'Empty or invalid resource' });
     }
     try {
-        const imageUrl = faker.image.url();
-
         const gundam = await Gundam.create({
             name: req.body.name,
             origin: req.body.origin,
@@ -98,7 +128,7 @@ router.post('/', async(req, res) => {
             scale: req.body.scale,
             unitType: req.body.unitType,
             description: req.body.description,
-            imageUrl: imageUrl,
+            imageUrl: req.body.imageUrl,
         });
         res.status(201).json({
             name: gundam.name,
@@ -146,7 +176,7 @@ router.post('/seed', async(req, res) => {
 });
 
 router.put('/:id/', async(req, res) => {
-    const {name, grade, scale} = req.body;
+    const {name, title, origin, grade, scale, unitType, description, imageUrl} = req.body;
 
     if(!name || !grade || !scale){
         return res.status(400).json({
@@ -165,7 +195,7 @@ router.put('/:id/', async(req, res) => {
                 scale: req.body.scale,
                 unitType: req.body.unitType,
                 description: req.body.description,
-                imageUrl: faker.image.url(),
+                imageUrl: req.body.imageUrl,
             },
             {
                 new: true,        // geef geüpdatet document terug
