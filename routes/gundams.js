@@ -1,6 +1,7 @@
 import express from 'express';
 import Gundam from '../models/Gundam.js';
 import {faker} from '@faker-js/faker';
+import mongoose from 'mongoose'
 
 const router = express.Router();
 
@@ -50,12 +51,21 @@ router.options('/:id', (req,res) => {
     res.status(204).send();
 });
 
-router.get('/:id', async(req, res) => {
-    const gundam = await Gundam.findById(req.params.id);
-    if (!gundam) {
-        return res.status(404).json({ error: "Gundam not found" });
+router.get('/:id', async (req, res) => {
+    const { id } = req.params;
+
+    // check of het een geldig ObjectId is
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(404).json({ error: 'Gunpla niet gevonden' });
     }
-    else{
+
+    try {
+        const gundam = await Gundam.findById(id);
+
+        if (!gundam) {
+            return res.status(404).json({ error: 'Gunpla niet gevonden' });
+        }
+
         res.json({
             id: gundam._id,
             name: gundam.name,
@@ -77,6 +87,9 @@ router.get('/:id', async(req, res) => {
                 }
             },
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
